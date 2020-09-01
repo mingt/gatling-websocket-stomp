@@ -1,0 +1,10 @@
+{
+  "simulation": "websocket.testing.StompSimulation",
+  "simulationId": "stompsimulation",
+  "start": 1598886866023,
+  "description": "",
+  "scenarios": ["WebSocket"],
+  "assertions": [
+
+  ]
+}
