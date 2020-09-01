@@ -14,6 +14,7 @@ repositories {
 
 gatling {
     logLevel = "TRACE"
+    jvmArgs = [ '-server', '-Xms512M', '-Xmx2048M' ]
 }
 
 dependencies {
