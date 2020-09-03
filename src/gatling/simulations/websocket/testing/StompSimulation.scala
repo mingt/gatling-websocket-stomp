@@ -13,7 +13,7 @@ class StompSimulation extends Simulation {
 
   // TODO：目前未有前置更新 token ，所以要测试哪个平台先手动在 postman 请求，再更新到这里。
   // 注意，可能这里测试服和本地、生产服的 token 不可混用了。
-  val authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOjEsIm1hY2hpbmVJZCI6IjEyMzQ1IiwidXNlcl9pZCI6MTEwMDQ4NywidXNlcl9uYW1lIjoibGFvc2hpMSIsInNjb3BlIjpbIm9wZW5pZCJdLCJhY3RpdmUiOnRydWUsImV4cCI6MTU5ODY2MTgxNiwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIl0sImp0aSI6Ijk5ODE1MjY3LWE2MzQtNDUyYS1iNzJmLWY3NTE3ZjE5Y2UxZiIsImNsaWVudF9pZCI6ImFjbWUiLCJ1c2VybmFtZSI6Imxhb3NoaTEifQ.Zzv3XLpxUVoxv0OaxNYNrrdB8ys51LQRvga70XB04ysU3MNXTdatXSHCVD3CHTip8yuCZ5bEgl4tzlW2IWlb7b6Ex1G6KFAgRwU1wT0oFqBqoBcc-4jljWswIbVRF3ReLLcf9CwU3AWxKqj47BaHf7U5nqMt1OFwU0t38bizDzIpX8SeN4V--3kfKW_x2_a9mGo-ENSCKExQTD1HM9RRUDpPOtvwMFRfEWXUffNogabQAfqNitr0YwGBUFuG_RvtPHtNW4wIK-zZA4jXqu-G2XVCdb9wSUV5BofE0EY_zrRDINa5I4I4EAnQ5fn6aeE7pN8B3RkpX_k9n-p8jZNrpA";
+  val authToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0ZW5hbnRfaWQiOjEsIm1hY2hpbmVJZCI6IjEyMzQ1IiwidXNlcl9pZCI6MTEwMDQ4NywidXNlcl9uYW1lIjoibGFvc2hpMSIsInNjb3BlIjpbIm9wZW5pZCJdLCJhY3RpdmUiOnRydWUsImV4cCI6MTU5OTA1MTgzOSwiZGVwdF9pZCI6bnVsbCwiYXV0aG9yaXRpZXMiOlsiUk9MRV9VU0VSIiwiUk9MRV9URUFDSEVSIl0sImp0aSI6ImFmZTFlZDY1LTgwMDUtNDYyMy1hY2Y3LWUwYjUxNWQ1YTgxZSIsImNsaWVudF9pZCI6ImFjbWUiLCJ1c2VybmFtZSI6Imxhb3NoaTEifQ.WHGUeOwG9lIJ8twIl_6rbmmpGQU9dunOiIuIqJpu_lookvnLItRJG1Wd-SghnCsCLv9aVLhlxPobY75GmsxJweE4fbTTJaVsQfCdVxFRPB4x3FxL6teQlnr9X-wzARGCk5ytG0ao0tZwnTv-PmWJ_6AJNIterSnaDnJCaqMlTlSaKyAVsdXPtNZoluNyHTgXG2CvkhS4zr8BO7W6sMbnYa0P8GDgId1bk-a76PzkJmMnunOT49QeGXy5fRgihbDdl6-jy2N5YXjQDx65HkR5K5qQWy--9oV2teUOMM3ppnJCPzfukdbRZQQVJPI2uzviIXSc8JN7AOnP6QWGMAWQxw";
 
   val httpConfig: HttpProtocolBuilder = http
     // .baseURL("http://localhost:8080")
@@ -47,13 +47,22 @@ class StompSimulation extends Simulation {
       .sendText("[\"SUBSCRIBE\\nid:sub-0\\ndestination:/topic/greetings\\n\\n\\u0000\"]")
     )
     .pause(1)
-    .repeat(10, "i") {
+    .repeat(100, "i") { // 每个用户持续发 100 条信息，间隔 1 秒
       exec(ws("Send message")
         .sendText("[\"SEND\\ndestination:/app/hello\\ncontent-length:15\\n\\n{\\\"name\\\":\\\"Sepp\\\"}\\u0000\"]")
         // .check(wsAwait.within(10).until(1).regex("MESSAGE\\\\ndestination:\\/topic\\/greetings\\\\ncontent-type:application\\/json;charset=UTF-8\\\\nsubscription:sub-0\\\\nmessage-id:[\\w\\d-]*\\\\ncontent-length:\\d*\\\\n\\\\n\\{\\\\\"content\\\\\":\\\\\"Hello, Sepp!\\\\\"\\}\\\\u0000"))
       ).pause(1)
     }
+    .pause(60) // 等待一段时间后主动关闭连接。注意有没有主动 heartbeat 心跳的情况，若没，Spring Websocket 默认 15 秒可能就已断开连接
     .exec(ws("Close WS").close)
 
-  setUp(scenario1.inject(atOnceUsers(1)).protocols(httpConfig))
+  setUp(scenario1.inject(
+
+      rampUsers(2000) over (20)
+      // rampUsers(5000) over (60)
+
+      , nothingFor(40)
+      , atOnceUsers(500)
+
+    ).protocols(httpConfig))
 }
